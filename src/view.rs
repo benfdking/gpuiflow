@@ -143,10 +143,30 @@ impl<D: Clone + Send + Sync + 'static> Render for GraphView<D> {
                         self.graph.edges.iter().filter_map(|edge| {
                             let source = self.graph.get_node(edge.source_id)?;
                             let target = self.graph.get_node(edge.target_id)?;
-                            // Calculate connection points: Source Bottom -> Target Top
-                            let source_bottom = (source.position * self.zoom_level) + point(150.0 * self.zoom_level / 2.0, 80.0 * self.zoom_level);
-                            let target_top = (target.position * self.zoom_level) + point(150.0 * self.zoom_level / 2.0, 0.0);
-                            Some(render_edge(edge, source_bottom, target_top, _window))
+
+                            // Helper to get handle position relative to node
+                            let get_handle_pos = |node: &Node<D>, handle_id: &Option<String>, default_pos: Point<f32>| -> Point<f32> {
+                                if let Some(h_id) = handle_id {
+                                    if let Some(handle) = node.handles.iter().find(|h| &h.id == h_id) {
+                                        let (x, y) = match handle.position {
+                                            crate::graph::HandlePosition::Top => (75.0, 0.0),
+                                            crate::graph::HandlePosition::Bottom => (75.0, 80.0),
+                                            crate::graph::HandlePosition::Left => (0.0, 40.0),
+                                            crate::graph::HandlePosition::Right => (150.0, 40.0),
+                                        };
+                                        return (node.position * self.zoom_level) + point(x * self.zoom_level, y * self.zoom_level);
+                                    }
+                                }
+                                default_pos
+                            };
+
+                            let source_default = (source.position * self.zoom_level) + point(150.0 * self.zoom_level / 2.0, 80.0 * self.zoom_level);
+                            let target_default = (target.position * self.zoom_level) + point(150.0 * self.zoom_level / 2.0, 0.0);
+
+                            let source_pos = get_handle_pos(source, &edge.source_handle_id, source_default);
+                            let target_pos = get_handle_pos(target, &edge.target_handle_id, target_default);
+
+                            Some(render_edge(edge, source_pos, target_pos, _window))
                         })
                     )
                     .children(
