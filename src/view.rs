@@ -1,9 +1,8 @@
-use gpui::*;
-use crate::graph::{Graph, Node};
-use crate::components::node::render_node;
-
-
+use crate::components::background::{BackgroundProps, render_background};
 use crate::components::edge::render_edge;
+use crate::components::node::render_node;
+use crate::graph::{Graph, Node};
+use gpui::*;
 use uuid::Uuid;
 
 struct DragState {
@@ -18,6 +17,7 @@ pub struct GraphView<D: 'static> {
     zoom_level: f32,
     is_panning: bool,
     last_mouse_pos: Point<f32>,
+    background: BackgroundProps,
 }
 
 impl<D: Clone + Send + Sync + 'static> GraphView<D> {
@@ -29,7 +29,13 @@ impl<D: Clone + Send + Sync + 'static> GraphView<D> {
             zoom_level: 1.0,
             is_panning: false,
             last_mouse_pos: Point::default(),
+            background: BackgroundProps::default(),
         }
+    }
+
+    pub fn set_background(&mut self, props: BackgroundProps, cx: &mut Context<Self>) {
+        self.background = props;
+        cx.notify();
     }
 
     pub fn add_node(&mut self, node: Node<D>) {
@@ -40,7 +46,12 @@ impl<D: Clone + Send + Sync + 'static> GraphView<D> {
         self.graph.add_edge(edge);
     }
 
-    fn handle_scroll_wheel(&mut self, event: &ScrollWheelEvent, _window: &mut Window, cx: &mut Context<Self>) {
+    fn handle_scroll_wheel(
+        &mut self,
+        event: &ScrollWheelEvent,
+        _window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
         let delta = event.delta.pixel_delta(px(20.0));
         if delta.y != px(0.0) {
             let zoom_factor = 1.1f32;
@@ -61,7 +72,12 @@ impl<D: Clone + Send + Sync + 'static> GraphView<D> {
         }
     }
 
-    fn handle_mouse_down(&mut self, event: &MouseDownEvent, _window: &mut Window, cx: &mut Context<Self>) {
+    fn handle_mouse_down(
+        &mut self,
+        event: &MouseDownEvent,
+        _window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
         let position = event.position.map(|p| f32::from(p));
         // Transform click position to graph coordinates
         let graph_pos = (position - self.pan_offset) / self.zoom_level;
@@ -87,7 +103,12 @@ impl<D: Clone + Send + Sync + 'static> GraphView<D> {
         }
     }
 
-    fn handle_mouse_up(&mut self, _event: &MouseUpEvent, _window: &mut Window, cx: &mut Context<Self>) {
+    fn handle_mouse_up(
+        &mut self,
+        _event: &MouseUpEvent,
+        _window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
         if self.drag_state.is_some() {
             self.drag_state = None;
             cx.notify();
@@ -98,11 +119,21 @@ impl<D: Clone + Send + Sync + 'static> GraphView<D> {
         }
     }
 
-    fn handle_mouse_move(&mut self, event: &MouseMoveEvent, _window: &mut Window, cx: &mut Context<Self>) {
+    fn handle_mouse_move(
+        &mut self,
+        event: &MouseMoveEvent,
+        _window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
         let position = event.position.map(|p| f32::from(p));
         if let Some(drag_state) = &self.drag_state {
             let graph_pos = (position - self.pan_offset) / self.zoom_level;
-            if let Some(node) = self.graph.nodes.iter_mut().find(|n| n.id == drag_state.node_id) {
+            if let Some(node) = self
+                .graph
+                .nodes
+                .iter_mut()
+                .find(|n| n.id == drag_state.node_id)
+            {
                 node.position = graph_pos - drag_state.offset;
                 cx.notify();
             }
@@ -127,6 +158,12 @@ impl<D: Clone + Send + Sync + 'static> Render for GraphView<D> {
             .on_mouse_down(MouseButton::Left, cx.listener(Self::handle_mouse_down))
             .on_mouse_up(MouseButton::Left, cx.listener(Self::handle_mouse_up))
             .on_mouse_move(cx.listener(Self::handle_mouse_move))
+            .child(render_background(BackgroundProps {
+                variant: self.background.variant,
+                gap: self.background.gap,
+                color: self.background.color,
+                size: self.background.size,
+            }))
             .child(
                 div()
                     .absolute()
@@ -139,50 +176,54 @@ impl<D: Clone + Send + Sync + 'static> Render for GraphView<D> {
                     // But scaling?
                     // We can use `with_transform` or just manual scaling of coordinates.
                     // Manual scaling is easier for now given we control rendering.
-                    .children(
-                        self.graph.edges.iter().filter_map(|edge| {
-                            let source = self.graph.get_node(edge.source_id)?;
-                            let target = self.graph.get_node(edge.target_id)?;
+                    .children(self.graph.edges.iter().filter_map(|edge| {
+                        let source = self.graph.get_node(edge.source_id)?;
+                        let target = self.graph.get_node(edge.target_id)?;
 
-                            // Helper to get handle position relative to node
-                            let get_handle_pos = |node: &Node<D>, handle_id: &Option<String>, default_pos: Point<f32>| -> Point<f32> {
-                                if let Some(h_id) = handle_id {
-                                    if let Some(handle) = node.handles.iter().find(|h| &h.id == h_id) {
-                                        let (x, y) = match handle.position {
-                                            crate::graph::HandlePosition::Top => (75.0, 0.0),
-                                            crate::graph::HandlePosition::Bottom => (75.0, 80.0),
-                                            crate::graph::HandlePosition::Left => (0.0, 40.0),
-                                            crate::graph::HandlePosition::Right => (150.0, 40.0),
-                                        };
-                                        return (node.position * self.zoom_level) + point(x * self.zoom_level, y * self.zoom_level);
-                                    }
+                        // Helper to get handle position relative to node
+                        let get_handle_pos = |node: &Node<D>,
+                                              handle_id: &Option<String>,
+                                              default_pos: Point<f32>|
+                         -> Point<f32> {
+                            if let Some(h_id) = handle_id {
+                                if let Some(handle) = node.handles.iter().find(|h| &h.id == h_id) {
+                                    let (x, y) = match handle.position {
+                                        crate::graph::HandlePosition::Top => (75.0, 0.0),
+                                        crate::graph::HandlePosition::Bottom => (75.0, 80.0),
+                                        crate::graph::HandlePosition::Left => (0.0, 40.0),
+                                        crate::graph::HandlePosition::Right => (150.0, 40.0),
+                                    };
+                                    return (node.position * self.zoom_level)
+                                        + point(x * self.zoom_level, y * self.zoom_level);
                                 }
-                                default_pos
-                            };
+                            }
+                            default_pos
+                        };
 
-                            let source_default = (source.position * self.zoom_level) + point(150.0 * self.zoom_level / 2.0, 80.0 * self.zoom_level);
-                            let target_default = (target.position * self.zoom_level) + point(150.0 * self.zoom_level / 2.0, 0.0);
+                        let source_default = (source.position * self.zoom_level)
+                            + point(150.0 * self.zoom_level / 2.0, 80.0 * self.zoom_level);
+                        let target_default = (target.position * self.zoom_level)
+                            + point(150.0 * self.zoom_level / 2.0, 0.0);
 
-                            let source_pos = get_handle_pos(source, &edge.source_handle_id, source_default);
-                            let target_pos = get_handle_pos(target, &edge.target_handle_id, target_default);
+                        let source_pos =
+                            get_handle_pos(source, &edge.source_handle_id, source_default);
+                        let target_pos =
+                            get_handle_pos(target, &edge.target_handle_id, target_default);
 
-                            Some(render_edge(edge, source_pos, target_pos, _window))
-                        })
-                    )
-                    .children(
-                        self.graph.nodes.iter().map(|node| {
-                            div()
-                                .absolute()
-                                .left(px(node.position.x * self.zoom_level))
-                                .top(px(node.position.y * self.zoom_level))
-                                .child(
-                                    div()
-                                        .w(px(150.0 * self.zoom_level))
-                                        .h(px(80.0 * self.zoom_level))
-                                        .child(render_node(node, _window))
-                                )
-                        })
-                    )
+                        Some(render_edge(edge, source_pos, target_pos, _window))
+                    }))
+                    .children(self.graph.nodes.iter().map(|node| {
+                        div()
+                            .absolute()
+                            .left(px(node.position.x * self.zoom_level))
+                            .top(px(node.position.y * self.zoom_level))
+                            .child(
+                                div()
+                                    .w(px(150.0 * self.zoom_level))
+                                    .h(px(80.0 * self.zoom_level))
+                                    .child(render_node(node, _window)),
+                            )
+                    })),
             )
     }
 }

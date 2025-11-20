@@ -1,5 +1,5 @@
-use gpui::*;
 use crate::graph::Node;
+use gpui::*;
 
 pub fn render_node<D: Clone + Send + Sync + 'static>(
     node: &Node<D>,
@@ -13,32 +13,46 @@ pub fn render_node<D: Clone + Send + Sync + 'static>(
         .rounded_md()
         .shadow_md()
         .relative() // Make sure handles can be positioned absolutely relative to this
-        .children(
-            node.handles.iter().map(|handle| {
-                let (t, b, l, r) = match handle.position {
-                    crate::graph::HandlePosition::Top => (Some(px(-5.0)), None, Some(px(75.0 - 5.0)), None), // Center top
-                    crate::graph::HandlePosition::Bottom => (None, Some(px(-5.0)), Some(px(75.0 - 5.0)), None), // Center bottom
-                    crate::graph::HandlePosition::Left => (Some(px(40.0 - 5.0)), None, Some(px(-5.0)), None), // Center left
-                    crate::graph::HandlePosition::Right => (Some(px(40.0 - 5.0)), None, None, Some(px(-5.0))), // Center right
-                };
+        .children(node.handles.iter().map(|handle| {
+            let (t, b, l, r) = match handle.position {
+                crate::graph::HandlePosition::Top => {
+                    (Some(px(-5.0)), None, Some(px(75.0 - 5.0)), None)
+                } // Center top
+                crate::graph::HandlePosition::Bottom => {
+                    (None, Some(px(-5.0)), Some(px(75.0 - 5.0)), None)
+                } // Center bottom
+                crate::graph::HandlePosition::Left => {
+                    (Some(px(40.0 - 5.0)), None, Some(px(-5.0)), None)
+                } // Center left
+                crate::graph::HandlePosition::Right => {
+                    (Some(px(40.0 - 5.0)), None, None, Some(px(-5.0)))
+                } // Center right
+            };
 
-                let mut div = div()
-                    .absolute()
-                    .w(px(10.0))
-                    .h(px(10.0))
-                    .bg(rgb(0xffffff))
-                    .rounded_full()
-                    .border_1()
-                    .border_color(rgb(0x000000));
+            let mut div = div()
+                .absolute()
+                .w(px(10.0))
+                .h(px(10.0))
+                .bg(rgb(0xffffff))
+                .rounded_full()
+                .border_1()
+                .border_color(rgb(0x000000));
 
-                if let Some(val) = t { div = div.top(val); }
-                if let Some(val) = b { div = div.bottom(val); }
-                if let Some(val) = l { div = div.left(val); }
-                if let Some(val) = r { div = div.right(val); }
+            if let Some(val) = t {
+                div = div.top(val);
+            }
+            if let Some(val) = b {
+                div = div.bottom(val);
+            }
+            if let Some(val) = l {
+                div = div.left(val);
+            }
+            if let Some(val) = r {
+                div = div.right(val);
+            }
 
-                div
-            })
-        )
+            div
+        }))
         .child(
             div()
                 .flex()
@@ -57,8 +71,8 @@ pub fn render_node<D: Clone + Send + Sync + 'static>(
                             div()
                                 .text_sm()
                                 .font_weight(FontWeight::BOLD)
-                                .child("Node Title")
-                        )
+                                .child("Node Title"),
+                        ),
                 )
                 .child(
                     div()
@@ -67,7 +81,7 @@ pub fn render_node<D: Clone + Send + Sync + 'static>(
                         .flex()
                         .items_center()
                         .justify_center()
-                        .child("Content")
-                )
+                        .child("Content"),
+                ),
         )
 }

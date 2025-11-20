@@ -1,5 +1,5 @@
-use uuid::Uuid;
 use gpui::Point;
+use uuid::Uuid;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum HandleType {
@@ -82,7 +82,11 @@ impl Edge {
         }
     }
 
-    pub fn with_handles(mut self, source_handle: impl Into<String>, target_handle: impl Into<String>) -> Self {
+    pub fn with_handles(
+        mut self,
+        source_handle: impl Into<String>,
+        target_handle: impl Into<String>,
+    ) -> Self {
         self.source_handle_id = Some(source_handle.into());
         self.target_handle_id = Some(target_handle.into());
         self

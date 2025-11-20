@@ -1,5 +1,5 @@
 use gpui::*;
-use gpuiflow::{GraphView, Node, Edge};
+use gpuiflow::{Edge, GraphView, Node};
 
 fn main() {
     gpui::Application::new().run(|cx| {
@@ -9,12 +9,13 @@ fn main() {
                 let node1 = Node::new((), Point::new(100.0, 100.0));
                 let node2 = Node::new((), Point::new(400.0, 300.0));
                 let edge = Edge::new(node1.id, node2.id);
-                
+
                 view.add_node(node1);
                 view.add_node(node2);
                 view.add_edge(edge);
                 view
             })
-        }).unwrap();
+        })
+        .unwrap();
     });
 }
