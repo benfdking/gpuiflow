@@ -18,6 +18,7 @@ pub struct GraphView<D: 'static> {
     zoom_level: f32,
     is_panning: bool,
     last_mouse_pos: Point<f32>,
+    is_locked: bool,
 }
 
 impl<D: Clone + Send + Sync + 'static> GraphView<D> {
@@ -29,6 +30,7 @@ impl<D: Clone + Send + Sync + 'static> GraphView<D> {
             zoom_level: 1.0,
             is_panning: false,
             last_mouse_pos: Point::default(),
+            is_locked: false,
         }
     }
 
@@ -113,7 +115,52 @@ impl<D: Clone + Send + Sync + 'static> GraphView<D> {
             cx.notify();
         }
     }
+
+    pub fn zoom_in(&mut self, _cx: &mut Context<Self>) {
+        if self.is_locked { return; }
+        self.zoom_level = (self.zoom_level * 1.2).clamp(0.1, 5.0);
+    }
+
+    pub fn zoom_out(&mut self, _cx: &mut Context<Self>) {
+        if self.is_locked { return; }
+        self.zoom_level = (self.zoom_level / 1.2).clamp(0.1, 5.0);
+    }
+
+    pub fn fit_view(&mut self, _cx: &mut Context<Self>) {
+        if self.is_locked { return; }
+        if self.graph.nodes.is_empty() { return; }
+
+        let mut min_x = f32::MAX;
+        let mut min_y = f32::MAX;
+        let mut max_x = f32::MIN;
+        let mut max_y = f32::MIN;
+
+        for node in &self.graph.nodes {
+            min_x = min_x.min(node.position.x);
+            min_y = min_y.min(node.position.y);
+            max_x = max_x.max(node.position.x + 150.0); // 150 is node width
+            max_y = max_y.max(node.position.y + 80.0);  // 80 is node height
+        }
+
+        let width = max_x - min_x;
+        let height = max_y - min_y;
+        let center_x = min_x + width / 2.0;
+        let center_y = min_y + height / 2.0;
+
+        // Assume window size is somewhat fixed or we can get it?
+        // For now, let's assume a viewport of 800x600 for calculation or just center it.
+        // Actually, without knowing viewport size, "fit view" is hard.
+        // But we can just center the graph at 0,0 offset and set zoom to 1.0 or calculate based on some assumption.
+        // Let's just reset to default for now as a "Home" button.
+        self.pan_offset = point(-center_x + 400.0, -center_y + 300.0); // Center in 800x600
+        self.zoom_level = 1.0;
+    }
+
+    pub fn toggle_lock(&mut self, _cx: &mut Context<Self>) {
+        self.is_locked = !self.is_locked;
+    }
 }
+
 
 impl<D: Clone + Send + Sync + 'static> Render for GraphView<D> {
     fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
@@ -132,13 +179,7 @@ impl<D: Clone + Send + Sync + 'static> Render for GraphView<D> {
                     .absolute()
                     .left(px(self.pan_offset.x))
                     .top(px(self.pan_offset.y))
-                    .size_full() // This might be an issue if size is constrained, but for absolute it's ok?
-                    // Actually we want a transform container
-                    // GPUI doesn't have arbitrary transform on div yet easily exposed?
-                    // We can just offset children.
-                    // But scaling?
-                    // We can use `with_transform` or just manual scaling of coordinates.
-                    // Manual scaling is easier for now given we control rendering.
+                    .size_full()
                     .children(
                         self.graph.edges.iter().filter_map(|edge| {
                             let source = self.graph.get_node(edge.source_id)?;
@@ -182,6 +223,93 @@ impl<D: Clone + Send + Sync + 'static> Render for GraphView<D> {
                                         .child(render_node(node, _window))
                                 )
                         })
+                    )
+            )
+            .child(
+                div()
+                    .absolute()
+                    .bottom(px(10.0))
+                    .left(px(10.0))
+                    .flex()
+                    .flex_col()
+                    .bg(rgb(0xffffff))
+                    .border_1()
+                    .border_color(rgb(0xeeeeee))
+                    .shadow_md()
+                    .rounded_md()
+                    .child(
+                        div()
+                            .w(px(24.0))
+                            .h(px(24.0))
+                            .flex()
+                            .items_center()
+                            .justify_center()
+                            .hover(|s| s.bg(rgb(0xf0f0f0)))
+                            .cursor_pointer()
+                            .on_mouse_down(MouseButton::Left, cx.listener(|view, _, _, cx| {
+                                view.zoom_in(cx);
+                                cx.notify();
+                            }))
+                            .child("+")
+                            .text_color(rgb(0x000000))
+                            .text_sm()
+                            .border_b_1()
+                            .border_color(rgb(0xeeeeee))
+                    )
+                    .child(
+                        div()
+                            .w(px(24.0))
+                            .h(px(24.0))
+                            .flex()
+                            .items_center()
+                            .justify_center()
+                            .hover(|s| s.bg(rgb(0xf0f0f0)))
+                            .cursor_pointer()
+                            .on_mouse_down(MouseButton::Left, cx.listener(|view, _, _, cx| {
+                                view.zoom_out(cx);
+                                cx.notify();
+                            }))
+                            .child("-")
+                            .text_color(rgb(0x000000))
+                            .text_sm()
+                            .border_b_1()
+                            .border_color(rgb(0xeeeeee))
+                    )
+                    .child(
+                        div()
+                            .w(px(24.0))
+                            .h(px(24.0))
+                            .flex()
+                            .items_center()
+                            .justify_center()
+                            .hover(|s| s.bg(rgb(0xf0f0f0)))
+                            .cursor_pointer()
+                            .on_mouse_down(MouseButton::Left, cx.listener(|view, _, _, cx| {
+                                view.fit_view(cx);
+                                cx.notify();
+                            }))
+                            .child("[]")
+                            .text_color(rgb(0x000000))
+                            .text_sm()
+                            .border_b_1()
+                            .border_color(rgb(0xeeeeee))
+                    )
+                    .child(
+                        div()
+                            .w(px(24.0))
+                            .h(px(24.0))
+                            .flex()
+                            .items_center()
+                            .justify_center()
+                            .hover(|s| s.bg(rgb(0xf0f0f0)))
+                            .cursor_pointer()
+                            .on_mouse_down(MouseButton::Left, cx.listener(|view, _, _, cx| {
+                                view.toggle_lock(cx);
+                                cx.notify();
+                            }))
+                            .child(if self.is_locked { "L" } else { "U" })
+                            .text_color(rgb(0x000000))
+                            .text_sm()
                     )
             )
     }
