@@ -143,9 +143,10 @@ impl<D: Clone + Send + Sync + 'static> Render for GraphView<D> {
                         self.graph.edges.iter().filter_map(|edge| {
                             let source = self.graph.get_node(edge.source_id)?;
                             let target = self.graph.get_node(edge.target_id)?;
-                            let source_center = (source.position * self.zoom_level) + point(150.0 * self.zoom_level, 80.0 * self.zoom_level) / 2.0;
-                            let target_center = (target.position * self.zoom_level) + point(150.0 * self.zoom_level, 80.0 * self.zoom_level) / 2.0;
-                            Some(render_edge(edge, source_center, target_center, _window))
+                            // Calculate connection points: Source Bottom -> Target Top
+                            let source_bottom = (source.position * self.zoom_level) + point(150.0 * self.zoom_level / 2.0, 80.0 * self.zoom_level);
+                            let target_top = (target.position * self.zoom_level) + point(150.0 * self.zoom_level / 2.0, 0.0);
+                            Some(render_edge(edge, source_bottom, target_top, _window))
                         })
                     )
                     .children(
