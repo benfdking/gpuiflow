@@ -1,4 +1,5 @@
 use crate::graph::Node;
+use crate::types::position::Position;
 use gpui::*;
 
 pub fn render_node<D: Clone + Send + Sync + 'static>(
@@ -15,16 +16,16 @@ pub fn render_node<D: Clone + Send + Sync + 'static>(
         .relative() // Make sure handles can be positioned absolutely relative to this
         .children(node.handles.iter().map(|handle| {
             let (t, b, l, r) = match handle.position {
-                crate::graph::HandlePosition::Top => {
+                Position::Top => {
                     (Some(px(-5.0)), None, Some(px(75.0 - 5.0)), None)
                 } // Center top
-                crate::graph::HandlePosition::Bottom => {
+                Position::Bottom => {
                     (None, Some(px(-5.0)), Some(px(75.0 - 5.0)), None)
                 } // Center bottom
-                crate::graph::HandlePosition::Left => {
+                Position::Left => {
                     (Some(px(40.0 - 5.0)), None, Some(px(-5.0)), None)
                 } // Center left
-                crate::graph::HandlePosition::Right => {
+                Position::Right => {
                     (Some(px(40.0 - 5.0)), None, None, Some(px(-5.0)))
                 } // Center right
             };

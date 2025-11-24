@@ -2,6 +2,7 @@ use crate::components::background::{BackgroundProps, render_background};
 use crate::components::edge::render_edge;
 use crate::components::node::render_node;
 use crate::graph::{Graph, Node};
+use crate::types::position::Position;
 use gpui::*;
 use uuid::Uuid;
 
@@ -188,10 +189,10 @@ impl<D: Clone + Send + Sync + 'static> Render for GraphView<D> {
                             if let Some(h_id) = handle_id {
                                 if let Some(handle) = node.handles.iter().find(|h| &h.id == h_id) {
                                     let (x, y) = match handle.position {
-                                        crate::graph::HandlePosition::Top => (75.0, 0.0),
-                                        crate::graph::HandlePosition::Bottom => (75.0, 80.0),
-                                        crate::graph::HandlePosition::Left => (0.0, 40.0),
-                                        crate::graph::HandlePosition::Right => (150.0, 40.0),
+                                        Position::Top => (75.0, 0.0),
+                                        Position::Bottom => (75.0, 80.0),
+                                        Position::Left => (0.0, 40.0),
+                                        Position::Right => (150.0, 40.0),
                                     };
                                     return (node.position * self.zoom_level)
                                         + point(x * self.zoom_level, y * self.zoom_level);
