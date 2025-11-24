@@ -11,11 +11,19 @@ struct DragState {
     offset: Point<f32>,
 }
 
+pub enum GraphEvent {
+    HandleClicked {
+        node_id: Uuid,
+        handle_id: String,
+        position: Point<f32>,
+    },
+}
+
 pub struct GraphView<D: 'static> {
-    graph: Graph<D>,
+    pub graph: Graph<D>,
     drag_state: Option<DragState>,
-    pan_offset: Point<f32>,
-    zoom_level: f32,
+    pub pan_offset: Point<f32>,
+    pub zoom_level: f32,
     is_panning: bool,
     last_mouse_pos: Point<f32>,
     background: BackgroundProps,
@@ -83,24 +91,53 @@ impl<D: Clone + Send + Sync + 'static> GraphView<D> {
         // Transform click position to graph coordinates
         let graph_pos = (position - self.pan_offset) / self.zoom_level;
 
-        // Check if we clicked on a node
-        let mut clicked_node = false;
+        // Check if we clicked on a handle
+        let mut clicked_handle = false;
         for node in self.graph.nodes.iter().rev() {
-            let node_rect = Bounds::new(node.position, size(150.0, 80.0));
-            if node_rect.contains(&graph_pos) {
-                self.drag_state = Some(DragState {
-                    node_id: node.id,
-                    offset: graph_pos - node.position,
-                });
-                clicked_node = true;
-                cx.notify();
-                break;
-            }
+             for handle in &node.handles {
+                let (x, y) = match handle.position {
+                    Position::Top => (75.0, 0.0),
+                    Position::Bottom => (75.0, 80.0),
+                    Position::Left => (0.0, 40.0),
+                    Position::Right => (150.0, 40.0),
+                };
+                let handle_pos = node.position + point(x, y);
+                let handle_rect = Bounds::new(handle_pos - point(5.0, 5.0), size(10.0, 10.0));
+                
+                if handle_rect.contains(&graph_pos) {
+                    cx.emit(GraphEvent::HandleClicked {
+                        node_id: node.id,
+                        handle_id: handle.id.clone(),
+                        position: handle_pos,
+                    });
+                    clicked_handle = true;
+                    // cx.notify(); // Not strictly needed if we just emit, but good for feedback if we had visual state
+                    break;
+                }
+             }
+             if clicked_handle { break; }
         }
 
-        if !clicked_node {
-            self.is_panning = true;
-            self.last_mouse_pos = position;
+        if !clicked_handle {
+            // Check if we clicked on a node
+            let mut clicked_node = false;
+            for node in self.graph.nodes.iter().rev() {
+                let node_rect = Bounds::new(node.position, size(150.0, 80.0));
+                if node_rect.contains(&graph_pos) {
+                    self.drag_state = Some(DragState {
+                        node_id: node.id,
+                        offset: graph_pos - node.position,
+                    });
+                    clicked_node = true;
+                    cx.notify();
+                    break;
+                }
+            }
+
+            if !clicked_node {
+                self.is_panning = true;
+                self.last_mouse_pos = position;
+            }
         }
     }
 
@@ -228,3 +265,5 @@ impl<D: Clone + Send + Sync + 'static> Render for GraphView<D> {
             )
     }
 }
+
+impl<D: 'static> EventEmitter<GraphEvent> for GraphView<D> {}
