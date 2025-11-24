@@ -1,6 +1,6 @@
 use gpui::*;
-use gpuiflow::{Edge, GraphView, Handle, HandleType, Node};
 use gpuiflow::types::position::Position;
+use gpuiflow::{Edge, GraphView, Handle, HandleType, Node};
 
 fn main() {
     gpui::Application::new().run(|cx| {
@@ -20,12 +20,8 @@ fn main() {
                         Position::Left,
                     )]);
 
-                let node3 =
-                    Node::new((), Point::new(100.0, 400.0)).with_handles(vec![Handle::new(
-                        "top",
-                        HandleType::Target,
-                        Position::Top,
-                    )]);
+                let node3 = Node::new((), Point::new(100.0, 400.0))
+                    .with_handles(vec![Handle::new("top", HandleType::Target, Position::Top)]);
 
                 let edge1 = Edge::new(node1.id, node2.id).with_handles("right", "left");
 

@@ -1,8 +1,7 @@
-use gpui::Point;
-use uuid::Uuid;
 pub use crate::components::handle::Handle;
 pub use crate::types::{handle::HandleType, position::Position};
-
+use gpui::Point;
+use uuid::Uuid;
 
 #[derive(Clone, Debug)]
 pub struct Node<D> {

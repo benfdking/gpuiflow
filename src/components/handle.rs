@@ -1,4 +1,3 @@
-
 use crate::types::{handle::HandleType, position::Position};
 
 #[derive(Clone, Debug)]
