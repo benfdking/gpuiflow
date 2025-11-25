@@ -68,7 +68,7 @@ impl<D: Clone + Send + Sync + 'static> GraphView<D> {
             // Pan with scroll wheel (touchpad)
             // Convert delta to f32
             let delta_f32 = point(f32::from(delta.x), f32::from(delta.y));
-            self.pan_offset = self.pan_offset + delta_f32;
+            self.pan_offset += delta_f32;
             cx.notify();
         }
     }
@@ -79,7 +79,7 @@ impl<D: Clone + Send + Sync + 'static> GraphView<D> {
         _window: &mut Window,
         cx: &mut Context<Self>,
     ) {
-        let position = event.position.map(|p| f32::from(p));
+        let position = event.position.map(f32::from);
         // Transform click position to graph coordinates
         let graph_pos = (position - self.pan_offset) / self.zoom_level;
 
@@ -126,7 +126,7 @@ impl<D: Clone + Send + Sync + 'static> GraphView<D> {
         _window: &mut Window,
         cx: &mut Context<Self>,
     ) {
-        let position = event.position.map(|p| f32::from(p));
+        let position = event.position.map(f32::from);
         if let Some(drag_state) = &self.drag_state {
             let graph_pos = (position - self.pan_offset) / self.zoom_level;
             if let Some(node) = self
@@ -140,7 +140,7 @@ impl<D: Clone + Send + Sync + 'static> GraphView<D> {
             }
         } else if self.is_panning {
             let delta = position - self.last_mouse_pos;
-            self.pan_offset = self.pan_offset + delta;
+            self.pan_offset += delta;
             self.last_mouse_pos = position;
             cx.notify();
         }
@@ -186,17 +186,18 @@ impl<D: Clone + Send + Sync + 'static> Render for GraphView<D> {
                                               handle_id: &Option<String>,
                                               default_pos: Point<f32>|
                          -> Point<f32> {
-                            if let Some(h_id) = handle_id {
-                                if let Some(handle) = node.handles.iter().find(|h| &h.id == h_id) {
-                                    let (x, y) = match handle.position {
-                                        Position::Top => (75.0, 0.0),
-                                        Position::Bottom => (75.0, 80.0),
-                                        Position::Left => (0.0, 40.0),
-                                        Position::Right => (150.0, 40.0),
-                                    };
-                                    return (node.position * self.zoom_level)
-                                        + point(x * self.zoom_level, y * self.zoom_level);
-                                }
+                            if let Some(handle) = handle_id
+                                .as_ref()
+                                .and_then(|h_id| node.handles.iter().find(|h| &h.id == h_id))
+                            {
+                                let (x, y) = match handle.position {
+                                    Position::Top => (75.0, 0.0),
+                                    Position::Bottom => (75.0, 80.0),
+                                    Position::Left => (0.0, 40.0),
+                                    Position::Right => (150.0, 40.0),
+                                };
+                                return (node.position * self.zoom_level)
+                                    + point(x * self.zoom_level, y * self.zoom_level);
                             }
                             default_pos
                         };
