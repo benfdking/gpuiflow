@@ -9,6 +9,7 @@ pub struct Node<D> {
     pub position: Point<f32>,
     pub data: D,
     pub handles: Vec<Handle>,
+    pub node_type: String,
 }
 
 impl<D> Node<D> {
@@ -18,11 +19,17 @@ impl<D> Node<D> {
             position,
             data,
             handles: Vec::new(),
+            node_type: "default".to_string(),
         }
     }
 
     pub fn with_handles(mut self, handles: Vec<Handle>) -> Self {
         self.handles = handles;
+        self
+    }
+
+    pub fn with_type(mut self, node_type: impl Into<String>) -> Self {
+        self.node_type = node_type.into();
         self
     }
 }
