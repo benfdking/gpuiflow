@@ -4,7 +4,10 @@ use crate::components::node::render_node;
 use crate::graph::{Graph, Node};
 use crate::types::position::Position;
 use gpui::*;
+use std::collections::HashMap;
 use uuid::Uuid;
+
+type NodeRenderFn<D> = Box<dyn Fn(&Node<D>, &Window) -> AnyElement + Send + Sync>;
 
 struct DragState {
     node_id: Uuid,
@@ -19,10 +22,17 @@ pub struct GraphView<D: 'static> {
     is_panning: bool,
     last_mouse_pos: Point<f32>,
     background: BackgroundProps,
+    node_types: HashMap<String, NodeRenderFn<D>>,
 }
 
 impl<D: Clone + Send + Sync + 'static> GraphView<D> {
     pub fn new(_cx: &mut Context<Self>) -> Self {
+        let mut node_types: HashMap<String, NodeRenderFn<D>> = HashMap::new();
+        node_types.insert(
+            "default".to_string(),
+            Box::new(|node, window| render_node(node, window).into_any_element()),
+        );
+
         Self {
             graph: Graph::new(),
             drag_state: None,
@@ -31,7 +41,19 @@ impl<D: Clone + Send + Sync + 'static> GraphView<D> {
             is_panning: false,
             last_mouse_pos: Point::default(),
             background: BackgroundProps::default(),
+            node_types,
         }
+    }
+
+    pub fn register_node_type<F, E>(&mut self, type_name: impl Into<String>, render_fn: F)
+    where
+        F: Fn(&Node<D>, &Window) -> E + Send + Sync + 'static,
+        E: IntoElement,
+    {
+        self.node_types.insert(
+            type_name.into(),
+            Box::new(move |node, window| render_fn(node, window).into_any_element()),
+        );
     }
 
     pub fn set_background(&mut self, props: BackgroundProps, cx: &mut Context<Self>) {
@@ -223,7 +245,22 @@ impl<D: Clone + Send + Sync + 'static> Render for GraphView<D> {
                                 div()
                                     .w(px(150.0 * self.zoom_level))
                                     .h(px(80.0 * self.zoom_level))
-                                    .child(render_node(node, _window)),
+                                    .h(px(80.0 * self.zoom_level))
+                                    .child(
+                                        if let Some(render_fn) =
+                                            self.node_types.get(&node.node_type)
+                                        {
+                                            render_fn(node, _window)
+                                        } else {
+                                            // Fallback to default if type not found
+                                            if let Some(default_fn) = self.node_types.get("default")
+                                            {
+                                                default_fn(node, _window)
+                                            } else {
+                                                div().child("Unknown node type").into_any_element()
+                                            }
+                                        },
+                                    ),
                             )
                     })),
             )

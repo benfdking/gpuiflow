@@ -1,6 +1,6 @@
 use gpui::*;
 use gpuiflow::components::background::{BackgroundProps, BackgroundVariant};
-use gpuiflow::{Edge, GraphView, Handle, HandlePosition, HandleType, Node};
+use gpuiflow::{Edge, GraphView, Handle, HandleType, Node, Position};
 
 struct BackgroundExample {
     graph: Entity<GraphView<String>>,
@@ -15,24 +15,22 @@ impl BackgroundExample {
             // Create nodes with custom data and handles
             let node1 =
                 Node::new("Input Node".to_string(), Point::new(100.0, 150.0)).with_handles(vec![
-                    Handle::new("out", HandleType::Source, HandlePosition::Right),
+                    Handle::new("out", HandleType::Source, Position::Right),
                 ]);
 
             let node2 =
                 Node::new("Process".to_string(), Point::new(350.0, 100.0)).with_handles(vec![
-                    Handle::new("in", HandleType::Target, HandlePosition::Left),
-                    Handle::new("out", HandleType::Source, HandlePosition::Right),
+                    Handle::new("in", HandleType::Target, Position::Left),
+                    Handle::new("out", HandleType::Source, Position::Right),
                 ]);
 
-            let node3 =
-                Node::new("Output".to_string(), Point::new(350.0, 250.0)).with_handles(vec![
-                    Handle::new("in", HandleType::Target, HandlePosition::Left),
-                ]);
+            let node3 = Node::new("Output".to_string(), Point::new(350.0, 250.0))
+                .with_handles(vec![Handle::new("in", HandleType::Target, Position::Left)]);
 
             let node4 =
                 Node::new("Result".to_string(), Point::new(600.0, 175.0)).with_handles(vec![
-                    Handle::new("in1", HandleType::Target, HandlePosition::Left),
-                    Handle::new("in2", HandleType::Target, HandlePosition::Left),
+                    Handle::new("in1", HandleType::Target, Position::Left),
+                    Handle::new("in2", HandleType::Target, Position::Left),
                 ]);
 
             // Create edges with handles
